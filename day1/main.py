@@ -6,8 +6,8 @@ if __name__ == '__main__':
     while value != '':
         values.append(int(value))
         value = input.readline(5)
-
     input.close()
+    
     for i in range(len(values)):
         for j in range(i, len(values)):
             sum = values[i] + values[j]
