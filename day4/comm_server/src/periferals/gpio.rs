@@ -1,6 +1,6 @@
 use core::ptr;
 use crate::periferals::utils;
-use crate::periferals::memory::MMIO_BASE;
+use crate::periferals::memmap::MMIO_BASE;
 
 pub const GPFSEL0: *mut u32   = (MMIO_BASE + 0x00200000) as *mut u32;
 pub const GPFSEL1: *mut u32   = (MMIO_BASE + 0x00200004) as *mut u32;

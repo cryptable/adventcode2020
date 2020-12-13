@@ -1,6 +1,6 @@
 use core::ptr;
 use crate::periferals::gpio;
-use crate::periferals::memory::MMIO_BASE;
+use crate::periferals::memmap::MMIO_BASE;
 
 /* Auxilary mini UART registers */
 const AUX_IRQ: *mut u32         = (MMIO_BASE + 0x00215000) as *mut u32;
@@ -61,6 +61,12 @@ impl Uart1 {
       let v = ptr::read_volatile(AUX_MU_IO);
 
       return v as u8;
+    }
+  }
+
+  pub fn putb(&self, value: &[u8]) {
+    for c in value {
+      self.putc( *c );
     }
   }
 
