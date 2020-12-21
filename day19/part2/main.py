@@ -79,6 +79,55 @@ class ConcatRuleNode:
             val.print_tree(level+1)
 
 
+def print_children(node):
+    print("{}-{}: ".format(node.type, node.key), end='')
+    for child in node.children:
+        print("({}-{})".format(child.type, child.key), end='')
+    print()
+
+
+memory = []
+
+
+def push_or_node(node, idx):
+    if not ((node,idx,0) in memory):
+        print("Add to stack {}-{}:{}".format(node.type, node.key, idx))
+        memory.append((node, idx, 0))
+
+
+def get_or_child_idx(stack_idx):
+    (node, idx, child_idx) = memory[stack_idx]
+    child_idx += 1
+    print("get memory el  {} {} {}".format(stack_idx, idx, child_idx))
+    memory[stack_idx] = (node, idx, child_idx)
+    return (memory[stack_idx][2] % 2)
+
+
+def clear():
+    memory.clear()
+
+
+def get_stack_element_index(node, idx):
+    if len(memory) == 0:
+        return -1
+    else:
+        for i in range(len(memory)):
+            if memory[i][0] == node and memory[i][1] == idx:
+                return i
+    return -1
+
+
+def is_stack_empty():
+    print("Stack length: {}".format(len(memory)))
+    if len(memory) == 0:
+        return True
+    for mem_el in memory:
+        print("memory el {} {}".format(mem_el[1], mem_el[2]))
+        if mem_el[2] <= 2:
+            return False
+    return True
+
+
 def verify_alpha(node, idx, value):
     print("{}: {} =? {}".format(node.key, node.rule, value[idx]))
     if node.rule == value[idx]:
@@ -87,36 +136,67 @@ def verify_alpha(node, idx, value):
 
 
 def verify_concat(node, idx, value):
+    print_children(node)
     for child in node.children:
         (idx, res) = traverse_tree(child, idx, value)
         if not res:
-            print("concat: NOK")
+            print("concat-{}: NOK".format(node.key))
             return (idx, False)
-    print("concat: OK")
+    print("concat-{}: OK".format(node.key))
     return (idx, True)
 
 
 def verify_or(node, idx, value):
-    print("or {}: children: {}".format(node.key, len(node.children)))
-    for child in node.children:
-        (ridx, res) = traverse_tree(child, idx, value)
+    print_children(node)
+
+    stack_idx = get_stack_element_index(node, idx)
+    if stack_idx >= 0:
+        child_idx = get_or_child_idx(stack_idx)
+        (ridx, res) = traverse_tree(node.children[1], idx, value)
         if res:
-            print("or:OK")
+            print("or-{}:OK".format(node.key))
             return (ridx, True)
-    print("or: NOK")
+        print("or-{}: NOK".format(node.key))
+    else:
+        (ridx, res) = traverse_tree(node.children[0], idx, value)
+        if res:
+            push_or_node(node, idx)
+            print("or-{}:OK".format(node.key))
+            return (ridx, True)
+        (ridx, res) = traverse_tree(node.children[1], idx, value)
+        if res:
+            print("or-{}:OK".format(node.key))
+            return (ridx, True)
+        print("or-{}: NOK".format(node.key))
+
     return (ridx, False)
 
 
 def traverse_tree(node, idx, value):
+
     if idx >= len(value):
+        print("p:{} overflow -> {}:{}".format(node.key, node.type, idx))
         return (idx, False)
-    print("p:{}-{} -> {}:{}".format(node.key, node.type, idx, value[idx]))
+
     if node.type == "alpha":
         return verify_alpha(node, idx, value)
     if node.type == "concat":
         return verify_concat(node, idx, value)
     if node.type == "or":
         return verify_or(node, idx, value)
+    return (idx, False)
+
+
+def try_travers_until_stack_empty(node, idx, value):
+    (ridx, res) = traverse_tree(node, idx, value)
+    if res and ridx == len(line.rstrip('\n')):
+        return (ridx, res)
+
+    while not is_stack_empty():
+        (ridx, res) = traverse_tree(node, idx, line.rstrip('\n'))
+        if res and ridx == len(line.rstrip('\n')):
+            return (ridx, res)
+
     return (idx, False)
 
 
@@ -143,14 +223,13 @@ def print_tree(ruleTree):
     ruleTree.print_tree(0)
 
 
-
 if __name__ == '__main__':
     state = READ_RULES
     rules = {}
     result = 0
     results=[]
     tree = None
-    with open("input.txt", "r") as inFile:
+    with open("input_test4.txt", "r") as inFile:
         for line in inFile:
             if line == '\n':
                 state = READ_VALUE
@@ -162,7 +241,9 @@ if __name__ == '__main__':
 #                print("{}: {}".format(key,line))
             if state == READ_VALUE:
                 print("read: {}".format(line.rstrip('\n')))
-                (idx, res) = traverse_tree(tree, 0, line.rstrip('\n'))
+                (idx, res) = try_travers_until_stack_empty(tree, 0, line.rstrip('\n'))
+                print("position: {}".format(idx))
+                clear()
                 if res and idx == len(line.rstrip('\n')):
                     results.append(line.rstrip('\n'))
                     result += 1
