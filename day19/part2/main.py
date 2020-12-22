@@ -79,53 +79,60 @@ class ConcatRuleNode:
             val.print_tree(level+1)
 
 
-def verify_alpha(node, idx, value):
-    print("{}: {} =? {}".format(node.key, node.rule, value[idx]))
-    if node.rule == value[idx]:
-        return [((idx+1), True)]
-    return [(idx, False)]
+def verify_alpha(node, list_idx, value):
+    result = []
+    for idx in list_idx:
+        print("{}: {} =? {}".format(node.key, node.rule, value[idx]))
+        if node.rule == value[idx]:
+            result.append(idx+1)
+    return result
 
 
-def verify_concat(node, idx, value):
+def verify_concat(node, list_idx, value):
     for child in node.children:
-        (idx, res) = traverse_tree(child, idx, value)
-        if not res:
+        list_idx = traverse_tree(child, list_idx, value)
+        if not list_idx:
             print("concat: NOK")
-            return [(idx, False)]
+            return []
     print("concat: OK")
-    return [(idx, True)]
+    return list_idx
 
 
-def verify_or(node, idx, value):
+def verify_or(node, list_idx, value):
     print("or {}: children: {}".format(node.key, len(node.children)))
-    (ridx1, res1) = traverse_tree(node.children[0], idx, value)
-    (ridx2, res2) = traverse_tree(node.children[1], idx, value)
+    list_ridx1 = traverse_tree(node.children[0], list_idx, value)
+    list_ridx2 = traverse_tree(node.children[1], list_idx, value)
 
-    if res1 and res2:
+    if list_ridx1 and list_ridx2:
         print("or:OK")
-        return [(ridx1, True), (ridx1, True)]
-    if res1:
+        return list_ridx1 + list_ridx2
+    if list_ridx1:
         print("or1:OK")
-        return [(ridx1, True)]
-    if res2:
+        return list_ridx1
+    if list_ridx2:
         print("or2:OK")
-        return [(ridx2, True)]
+        return list_ridx2
 
     print("or: NOK")
-    return (ridx1, False)
+    return []
 
 
-def traverse_tree(node, idx, value):
-    if idx >= len(value):
-        return (idx, False)
-    print("p:{}-{} -> {}:{}".format(node.key, node.type, idx, value[idx]))
+def traverse_tree(node, list_idx, value):
+    new_list_idx = []
+    for idx in list_idx:
+        if idx < len(value):
+            print("p:{}-{} -> {}:{}".format(node.key, node.type, idx, value[idx]))
+            new_list_idx.append(idx)
+    if not list_idx:
+        print("p:{}-{}: overrun".format(node.key, node.type))
+        []
     if node.type == "alpha":
-        return verify_alpha(node, idx, value)
+        return verify_alpha(node, new_list_idx, value)
     if node.type == "concat":
-        return verify_concat(node, idx, value)
+        return verify_concat(node, new_list_idx, value)
     if node.type == "or":
-        return verify_or(node, idx, value)
-    return (idx, False)
+        return verify_or(node, new_list_idx, value)
+    return []
 
 
 def create_rule_node(key, rule_value):
@@ -151,14 +158,13 @@ def print_tree(ruleTree):
     ruleTree.print_tree(0)
 
 
-
 if __name__ == '__main__':
     state = READ_RULES
     rules = {}
     result = 0
     results=[]
     tree = None
-    with open("input_test5.txt", "r") as inFile:
+    with open("input.txt", "r") as inFile:
         for line in inFile:
             if line == '\n':
                 state = READ_VALUE
@@ -170,10 +176,13 @@ if __name__ == '__main__':
 #                print("{}: {}".format(key,line))
             if state == READ_VALUE:
                 print("read: {}".format(line.rstrip('\n')))
-                (idx, res) = traverse_tree(tree, 0, line.rstrip('\n'))
-                if res and idx == len(line.rstrip('\n')):
-                    results.append(line.rstrip('\n'))
-                    result += 1
+                list_idx = traverse_tree(tree, [0], line.rstrip('\n'))
+                if list_idx:
+                    for idx in list_idx:
+                        if idx == len(line.rstrip('\n')):
+                            results.append(line.rstrip('\n'))
+                            result += 1
+                            break
 
         inFile.close()
         print("Result: {}".format(result))
