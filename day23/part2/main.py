@@ -1,82 +1,111 @@
 import cProfile
 
+class Node:
+
+    def __init__(self, cup):
+        self.next_cup = cup
 
 class CircleBuffer:
 
     def __init__(self, init):
-        self.buffer = [int(x) for x in list(init)]
-        for i in range(len(self.buffer), 1000000):
-            self.buffer.append(i)
-        self.idx = 0
-        self.max = len(self.buffer)
+        print(init)
+        tmp_buffer = [int(x) for x in list(init)]
+        self.buffer = [None] * (len(tmp_buffer)+1)
+        for idx in range(len(tmp_buffer)):
+            if idx == len(tmp_buffer)-1:
+                self.buffer[tmp_buffer[idx]] = Node(len(tmp_buffer)+1)
+            else:
+                next_cup = tmp_buffer[idx+1]
+                self.buffer[tmp_buffer[idx]] = Node(next_cup)
+        for i in range(len(tmp_buffer), 1000001):
+            self.buffer.append(Node(i+1 if i == 1000000 else tmp_buffer[0]))
 
-    def _calculate_position(self, taken_cups, old_cup):
+        print("Node {}".format(self.buffer[5].next_cup))
+        self.curr_cup = tmp_buffer[0]
+
+    def _cup_in_taken_cups(self, first_taken_cups, old_cup):
+        tmp = first_taken_cups
+        for _ in range(3):
+            if tmp == old_cup:
+                return True
+            tmp = self.buffer[tmp].next_cup
+        return False
+
+    def _calculate_position(self, first_taken_cups, old_cup):
         old_cup -= 1
         if old_cup == 0:
-            old_cup = 9
-        while old_cup in taken_cups:
+            old_cup = len(self.buffer) - 1
+        while self._cup_in_taken_cups(first_taken_cups, old_cup):
             old_cup -= 1
             if old_cup == 0:
-                old_cup = 9
+                old_cup = len(self.buffer) - 1
         return old_cup
 
-    def _take_remove_cups(self, idx):
-        cups = []
-        for i in range(3):
-            remove_cup_idx = (idx + i) % self.max
-            cup = self.buffer[remove_cup_idx]
-            cups.append(cup)
-        return cups
-
-    def add_idx(self, idx, val):
-        return (idx + val) % self.max
-
-    def dec_idx(self, idx):
-        return (idx - 1) % self.max
-
-    def _move_memory(self, after_cup_idx):
-        # 3 places free after self.idx
-        mem_idx = self.idx
-        if (mem_idx + 1) == after_cup_idx:
-            return
-        stop_idx = self.dec_idx(after_cup_idx)
-        while mem_idx != stop_idx:
-            to_idx = self.add_idx(mem_idx, 3)
-            self.buffer[to_idx] = self.buffer[mem_idx]
-            mem_idx = self.dec_idx(mem_idx)
-        self.idx = self.add_idx(self.idx, 3)
+    def _take_cups(self, from_cup):
+        result = self.buffer[from_cup].next_cup
+        tmp = self.buffer[from_cup].next_cup
+        tmp = self.buffer[tmp].next_cup
+        tmp = self.buffer[tmp].next_cup
+        self.buffer[from_cup].next_cup = self.buffer[tmp].next_cup
+        return result
 
     def _insert_cups(self, elements, cur_cup):
         after_cup = self._calculate_position(elements, cur_cup)
-        after_cup_idx = self.add_idx(self.buffer.index(after_cup), 1)
-        self._move_memory(after_cup_idx)
-        for el in elements:
-            self.buffer[after_cup_idx] = el
-            after_cup_idx = self.add_idx(after_cup_idx, 1)
+#        print("Position : {}".format(after_cup))
+        cup_after_cup = self.buffer[after_cup].next_cup
+        self.buffer[after_cup].next_cup = elements
+        tmp = self.buffer[elements].next_cup
+        tmp = self.buffer[tmp].next_cup
+        self.buffer[tmp].next_cup = cup_after_cup
+
 
     def step(self):
-        # print("Index pos {}".format(self.idx))
-        cur_cup = self.buffer[self.idx]
-        # print(self.buffer)
+        print("Index pos {}".format(self.curr_cup))
+#        print("Buffer: ", end='')
+#        self.print_all()
 
-#        with cProfile.Profile() as pr:
-        take_cups = self._take_remove_cups(self.idx+1)
-        self._insert_cups(take_cups, cur_cup)
-#        pr.print_stats()
+        take_cups = self._take_cups(self.curr_cup)
 
-        # print(take_cups)
-        self.idx = self.add_idx(self.idx, 1)
+        print("Taken: ",end='')
+        self.print_taken(take_cups)
+
+        self._insert_cups(take_cups, self.curr_cup)
+
+#        print("Buffer - after: ", end='')
+#        self.print_all()
+
+        self.curr_cup = self.buffer[self.curr_cup].next_cup
+
+    def print_taken(self, cup):
+        tmp = cup
+        for i in range(3):
+            print(tmp, end='')
+            tmp = self.buffer[tmp].next_cup
+        print()
+
+    def print_all(self):
+        tmp = self.buffer[1]
+        for i in range(1, len(self.buffer)):
+            print(tmp.next_cup, end='')
+            tmp = self.buffer[tmp.next_cup]
+        print()
+
+    def print_buf(self):
+        print("buf: ", end='')
+        for i in range(1, len(self.buffer)):
+            print(self.buffer[i].next_cup, end='')
+        print()
 
     def print(self):
-        idx_one = self.buffer.index(1)
-        for i in range(len(self.buffer) - 1):
-            print(self.buffer[(idx_one + 1 + i) % len(self.buffer)], end='')
+        tmp = self.buffer[1]
+        for i in range(1, len(self.buffer) - 1):
+            print(tmp.next_cup, end='')
+            tmp = self.buffer[tmp.next_cup]
         print()
 
     def print_two_values_after_one(self):
-        idx_one = self.buffer.index(1)
-        print("Position N+1 of 1: {}".format(self.buffer[(idx_one + 1) % len(self.buffer)]))
-        print("Position N+2 of 1: {}".format(self.buffer[(idx_one + 2) % len(self.buffer)]))
+        print("Position N+1 of 1: {}".format(self.buffer[1].next_cup))
+        print("Position N+2 of 1: {}".format(self.buffer[self.buffer[1].next_cup].next_cup))
 
 if __name__ == '__main__':
     #input = "389125467"
@@ -84,9 +113,9 @@ if __name__ == '__main__':
 
     circle = CircleBuffer(input)
 
-    for i in range(1000000):
+    for i in range(10):
         if (i%1000) == 0:
             print("-- Move {} --".format(i+1))
         circle.step()
-    circle.print()
+ #   circle.print()
     circle.print_two_values_after_one()
