@@ -17,10 +17,10 @@ class CircleBuffer:
             else:
                 next_cup = tmp_buffer[idx+1]
                 self.buffer[tmp_buffer[idx]] = Node(next_cup)
-        for i in range(len(tmp_buffer), 1000001):
-            self.buffer.append(Node(i+1 if i == 1000000 else tmp_buffer[0]))
+        for i in range(len(tmp_buffer), 1000000):
+            self.buffer.append(Node(i+2 if i != 999999 else tmp_buffer[0]))
 
-        print("Node {}".format(self.buffer[5].next_cup))
+        print("Node {}".format(self.buffer[7].next_cup))
         self.curr_cup = tmp_buffer[0]
 
     def _cup_in_taken_cups(self, first_taken_cups, old_cup):
@@ -60,14 +60,14 @@ class CircleBuffer:
 
 
     def step(self):
-        print("Index pos {}".format(self.curr_cup))
+#        print("Index pos {}".format(self.curr_cup))
 #        print("Buffer: ", end='')
 #        self.print_all()
 
         take_cups = self._take_cups(self.curr_cup)
 
-        print("Taken: ",end='')
-        self.print_taken(take_cups)
+#        print("Taken: ",end='')
+#        self.print_taken(take_cups)
 
         self._insert_cups(take_cups, self.curr_cup)
 
@@ -106,6 +106,7 @@ class CircleBuffer:
     def print_two_values_after_one(self):
         print("Position N+1 of 1: {}".format(self.buffer[1].next_cup))
         print("Position N+2 of 1: {}".format(self.buffer[self.buffer[1].next_cup].next_cup))
+        print("Multiplication of N+1 and N+2: {}".format(format(self.buffer[1].next_cup * self.buffer[self.buffer[1].next_cup].next_cup)))
 
 if __name__ == '__main__':
     #input = "389125467"
@@ -113,9 +114,9 @@ if __name__ == '__main__':
 
     circle = CircleBuffer(input)
 
-    for i in range(10):
-        if (i%1000) == 0:
-            print("-- Move {} --".format(i+1))
+    for i in range(10000000):
+ #       if (i%1000) == 0:
+ #           print("-- Move {} --".format(i+1))
         circle.step()
  #   circle.print()
     circle.print_two_values_after_one()
