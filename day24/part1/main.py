@@ -29,18 +29,30 @@ class TileFloor:
         self.floor = [[Tile(0)]]
         self.curr_pos = (0, 0)
 
+    # We're on an N+1-long row
+    def odd_row_from_origin(self):
+        return (abs(self.curr_pos[0]-self.origin[0]) % 2) == 1
+
+    # We're on an N-long row
+    def even_row_from_origin(self):
+        return (abs(self.curr_pos[0]-self.origin[0]) % 2) == 0
+
+    def even_row_from_origin_and(self, this):
+        return (abs(this-self.origin[0]) % 2) == 0
+
     def add_row(self):
-        self.floor.append([None] * len(self.floor[0]))
+        if self.even_row_from_origin():
+            self.floor.append([None] * (len(self.floor[self.origin[0]]) + 1))
+        else:
+            self.floor.append([None] * len(self.floor[0]))
 
     def insert_row(self):
-        self.floor.insert(0, [None] * len(self.floor[0]))
-        origin_row = self.origin[0]
-        if origin_row % 2 == 0:
-            self.origin = (self.origin[0]+1, self.origin[1])
-            self.curr_pos = (self.curr_pos[0]+1, self.curr_pos[1])
+        if self.even_row_from_origin():
+            self.floor.insert(0, [None] * (len(self.floor[self.origin[0]])+1))
         else:
-            self.origin = (self.origin[0]+1, self.origin[1]+1)
-            self.curr_pos = (self.curr_pos[0]+1, self.curr_pos[1]+1)
+            self.floor.insert(0, [None] * len(self.floor[0]))
+        self.origin = (self.origin[0]+1, self.origin[1])
+        self.curr_pos = (self.curr_pos[0]+1, self.curr_pos[1])
 
     def add_col(self):
         for tile_row in self.floor:
@@ -49,22 +61,14 @@ class TileFloor:
     def insert_col(self, update_cur_pos=False):
         for tile_row in self.floor:
             tile_row.insert(0, None)
-        origin_row = self.origin[0]
-        if origin_row % 2 == 1:
-            self.origin = (self.origin[0], self.origin[1]+1)
-#        curr_pos_row = self.curr_pos[0]
-#        if update_cur_pos:
-#            self.curr_pos = (self.curr_pos[0], self.curr_pos[1] + 1)
-#        else:
-        if origin_row % 2 == 1:
-            self.curr_pos = (self.curr_pos[0], self.curr_pos[1]+1)
+        self.origin = (self.origin[0], self.origin[1]+1)
+        self.curr_pos = (self.curr_pos[0], self.curr_pos[1]+1)
 
     def print(self):
-        alternate = True
-        for tile_row in self.floor:
-            if alternate:
+        for tile_row_id in range(len(self.floor)):
+            if self.even_row_from_origin_and(tile_row_id):
                 print(' ', end='')
-            for tile in tile_row:
+            for tile in self.floor[tile_row_id]:
                 if tile:
                     if tile.color == 'black':
                         print('B', end=' ')
@@ -72,20 +76,17 @@ class TileFloor:
                         print('W', end=' ')
                 else:
                     print('N', end=' ')
-            alternate = not alternate
             print()
 
     def print_id(self):
-        alternate = True
-        for tile_row in self.floor:
-            if alternate:
+        for tile_row_id in range(len(self.floor)):
+            if self.even_row_from_origin_and(tile_row_id):
                 print(' ', end='')
-            for tile in tile_row:
+            for tile in self.floor[tile_row_id]:
                 if tile:
                     print('{}'.format(tile.id), end=' ')
                 else:
                     print('N', end=' ')
-            alternate = not alternate
             print()
         print('Origin {} {}'.format(self.origin[0], self.origin[1]))
         print('Cur Pos {} {}'.format(self.curr_pos[0], self.curr_pos[1]))
@@ -105,23 +106,21 @@ class TileFloor:
             if line[pos:].startswith('se'):
                 if self.curr_pos[0] == len(self.floor) - 1:
                     self.add_row()
-                if self.curr_pos[1] == len(self.floor[0]) - 1:
+                if (self.curr_pos[1] == len(self.floor[self.curr_pos[0]]) - 1) and self.odd_row_from_origin():
                     self.add_col()
-                self.curr_pos = (self.curr_pos[0] + 1, (self.curr_pos[1] + 1) if self.curr_pos[0] % 2 == 0 else self.curr_pos[1])
+                self.curr_pos = (self.curr_pos[0] + 1,
+                                 (self.curr_pos[1] + 1) if self.even_row_from_origin() else self.curr_pos[1])
                 if not self.floor[self.curr_pos[0]][self.curr_pos[1]]:
                     self.floor[self.curr_pos[0]][self.curr_pos[1]] = Tile(id)
+                self.print_id()
                 pos += 2
             elif line[pos:].startswith('sw'):
-                print("sw1 {} {}".format(self.curr_pos[0], self.curr_pos[1]))
                 if self.curr_pos[0] == len(self.floor) - 1:
                     self.add_row()
-                print("sw2 {} {}".format(self.curr_pos[0], self.curr_pos[1]))
-                if self.curr_pos[1] == 0:
+                if self.curr_pos[1] == 0 and self.odd_row_from_origin():
                     self.insert_col()
-                print("sw3 {} {}".format(self.curr_pos[0], self.curr_pos[1]))
                 self.curr_pos = (self.curr_pos[0] + 1,
-                                (self.curr_pos[1] - 1) if self.origin[0] % 2 == 1 else self.curr_pos[1])
-                print("sw4 {} {}".format(self.curr_pos[0], self.curr_pos[1]))
+                                self.curr_pos[1] if self.even_row_from_origin() else (self.curr_pos[1] - 1))
                 if not self.floor[self.curr_pos[0]][self.curr_pos[1]]:
                     self.floor[self.curr_pos[0]][self.curr_pos[1]] = Tile(id)
                 self.print_id()
@@ -129,32 +128,32 @@ class TileFloor:
             elif line[pos:].startswith('ne'):
                 if self.curr_pos[0] == 0:
                     self.insert_row()
-                if self.curr_pos[1] == len(self.floor[0]) - 1:
+                if self.curr_pos[1] == len(self.floor[self.curr_pos[0]]) - 1 and self.odd_row_from_origin():
                     self.add_col()
-                self.curr_pos = (self.curr_pos[0] - 1, (self.curr_pos[1] + 1) if self.curr_pos[0] % 2 == 0 else self.curr_pos[1])
+                self.curr_pos = (self.curr_pos[0] - 1,
+                                 (self.curr_pos[1] + 1) if self.even_row_from_origin() else self.curr_pos[1])
                 if not self.floor[self.curr_pos[0]][self.curr_pos[1]]:
                     self.floor[self.curr_pos[0]][self.curr_pos[1]] = Tile(id)
+                self.print_id()
                 pos += 2
             elif line[pos:].startswith('nw'):
-                if self.curr_pos[0] == 0 and self.curr_pos[1] == 0:
+                if self.curr_pos[0] == 0:
                     self.insert_row()
-                    if self.origin[0] % 2 == 1:
-                        self.insert_col()
-                elif self.curr_pos[0] == 0:
-                    self.insert_row()
-                elif self.curr_pos[1] == 0:
+                if self.curr_pos[0] == 0 and self.odd_row_from_origin():
                     self.insert_col()
                 self.curr_pos = (self.curr_pos[0] - 1,
-                                (self.curr_pos[1] - 1) if self.curr_pos[0] % 2 == 1 else self.curr_pos[1])
+                                self.curr_pos[1] if self.even_row_from_origin() else (self.curr_pos[1] - 1))
                 if not self.floor[self.curr_pos[0]][self.curr_pos[1]]:
                     self.floor[self.curr_pos[0]][self.curr_pos[1]] = Tile(id)
+                self.print_id()
                 pos += 2
             elif line[pos:].startswith('e'):
-                if self.curr_pos[1] == len(self.floor[0]) - 1:
+                if self.curr_pos[1] == len(self.floor[self.curr_pos[0]]) - 1:
                     self.add_col()
                 self.curr_pos = (self.curr_pos[0], self.curr_pos[1] + 1)
                 if not self.floor[self.curr_pos[0]][self.curr_pos[1]]:
                     self.floor[self.curr_pos[0]][self.curr_pos[1]] = Tile(id)
+                self.print_id()
                 pos += 1
             elif line[pos:].startswith('w'):
                 if self.curr_pos[1] == 0:
@@ -162,6 +161,7 @@ class TileFloor:
                 self.curr_pos = (self.curr_pos[0], self.curr_pos[1] - 1)
                 if not self.floor[self.curr_pos[0]][self.curr_pos[1]]:
                     self.floor[self.curr_pos[0]][self.curr_pos[1]] = Tile(id)
+                self.print_id()
                 pos += 1
             else:
                 raise Exception("Unknown command")
@@ -174,7 +174,7 @@ if __name__ == '__main__':
     id = 0
     floor = TileFloor()
 
-    with open("input_test4.txt", "r") as inFile:
+    with open("input_test5.txt", "r") as inFile:
         for line in inFile:
             floor.create_floor(line.rstrip('\n'))
 
